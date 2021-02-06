@@ -16,14 +16,18 @@ class Model():
         self.xi, self.yi = np.mgrid[0:360:1, 0:300:1]
         self.yi = self.yi / 3
         self.OL = None
-        self.figure = plt.figure()
+        self.figure = plt.figure(figsize=(8,6))
         self.axes1 = self.figure.add_subplot(111, projection='3d')
-        self.axes1.set_xlim(-100, 0)
+        self.axes1.set_xlabel("Distance downwind ($m$)")
+        self.axes1.set_zlabel("Height ($m$)")
+        self.axes1.set_xlim(-200, 0)
         self.axes1.set_ylim(-200, 200)
         self.axes1.set_zlim(0, 100)
         self.axes1.set_yticks([])
-        #self.axes2 = self.figure.add_subplot(212)
-        #self.plt.ion()
+        #self.count = None
+        self.height_total = []
+        
+        self.add_particles(15, [0], [0], [40], 0.8, -180, 150)
 
     def add_particles(self, count, x, y, z, ustar, theta, H):
         #  This function adds particles to the set of all particles used in the diffusion calculations
@@ -38,7 +42,7 @@ class Model():
         #
         #  flg is a label attached to the group of particles created.
         #
-
+        
         # get the x,y, and z cartesian domain limits
         if len(x) == 1:
             x0 = x
@@ -83,6 +87,7 @@ class Model():
             self.up = np.append(self.up, np.zeros(count))
             self.vp = np.append(self.vp, np.zeros(count))
             self.wp = np.append(self.wp, np.zeros(count))
+            #print(count, self.ustar, np.ones(count)*ustar)
             self.ustar = np.append(self.ustar, np.ones(count) * ustar)
             self.theta = np.append(self.theta, np.ones(count) * theta)
             self.H = np.append(self.H, np.ones(count) * H)
@@ -99,6 +104,7 @@ class Model():
             height = np.round(self.z[idout]*300/self.max_height).astype(int)
             height[height > 299] = 299
             self.exit_count[direct,height] =  self.exit_count[direct,height] + 1
+            self.height_total.append(height.tolist())
         
         # eliminate particles outside domain
         idin = dist < self.xrange
@@ -187,8 +193,9 @@ class Model():
         if ix < 300:
             self.axes1.cla()
             self.axes1.scatter(x, y, z, s=1, c='red')
-            
-            self.axes1.set_xlim(-100, 0)
+            self.axes1.set_xlabel("Distance downwind ($m$)")
+            self.axes1.set_zlabel("Height ($m$)")
+            self.axes1.set_xlim(-200, 0)
             self.axes1.set_ylim(-200, 200)
             self.axes1.set_zlim(0, 100)
             self.axes1.set_yticks([])
@@ -197,7 +204,7 @@ class Model():
             self.axes1.view_init(elev, azim)
             #plt.show()
             #self.axes2.contourf(xi, yi, exit_count, 20, cmap=plt.cm.rainbow)
-            plt.suptitle('time, sec: '+f"{ix*0.1:9.1f}"+'\n'+'Stability = '+f"{OL:9.1f}")
+            plt.suptitle('Particles released from 40 $m$ above ground \n time, sec: '+f"{ix*0.1:9.1f}"+'\n'+'Stability = '+f"{OL:9.1f}")
             plt.pause(0.05)
             self.figure.canvas.draw()
             #plt.ion()
@@ -205,22 +212,29 @@ class Model():
         elif np.mod(ix, 500) == 0:
             self.axes1.cla()
             self.axes1.scatter(x, y, z, s=1, c='red')
-            
+            self.axes1.set_xlabel("Distance downwind ($m$)")
+            self.axes1.set_zlabel("Height ($m$)")
             self.axes1.set_xlim(-220, 0)
             self.axes1.set_ylim(-200, 200)
             self.axes1.set_zlim(0, 100)
             #plt.show()
             #self.axes2.contourf(xi, yi, exit_count, 20, cmap=plt.cm.rainbow)
-            plt.suptitle('time: (s):'+(f"{ix*0.1:9.1f}"))
+            plt.suptitle('Particles released from 40 $m$ above ground \n time: (s):'+(f"{ix*0.1:9.1f}"))
             plt.pause(0.05)
             self.figure.canvas.draw()
     
     def run(self):
         # loop over time (0.2 sec time step)
-        for self.ix in range(300):
+        for self.ix in range(400):
             # update particles
             self.update_particles(0.2)
             self.redraw_plot(self.ix, self.xi, self.yi, self.x, self.y, self.z, self.exit_count, self.OL)
             # add {count} number of new particles at each time step
             # (self, count, x, y, z, ustar, theta, H)
-            self.add_particles(50, [0], [0], [40], 0.2, -180, 150)
+            self.add_particles(15, [0], [0], [40], 0.8, -180, 150)
+            
+        # self.flatList=[]
+#         for elem in self.height_total:   # convert list of lists to a flat list
+#             self.flatList.extend(elem)
+#         #print(self.flatList)    
+#         self.plot_histogram(self.flatList)

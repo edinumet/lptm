@@ -43,10 +43,11 @@ class Model():
         self.exit_count = np.zeros([360,300])
         self.xi, self.yi = np.mgrid[0:360:1, 0:300:1]
         self.yi = self.yi / 3
+        self.height_total = []
 
         # add initial particles
         #flg = 1
-        self.add_particles(3, [0], [0], [10], 1.0, 180, 200)
+        self.add_particles(15, [0], [0], [40], 0.8, 180, 150)
 
     def add_particles(self, count, x, y, z, ustar, theta, H):
         #  This function adds particles to the set of all particles used in the diffusion calculations
@@ -122,6 +123,8 @@ class Model():
             height = np.round(self.z[idout]*300/self.max_height).astype(int)
             height[height > 299] = 299
             self.exit_count[direct,height] =  self.exit_count[direct,height] + 1
+            #print("direct = {}, height = {}".format(direct,height))
+            self.height_total.append(height.tolist())
         
         # eliminate particles outside domain
         idin = dist < self.range
@@ -136,8 +139,10 @@ class Model():
         self.H = self.H[idin]
         #self.flg = self.flg[idin]
 
-    def update_particles(self, dt):
+    def update_particles(self, dt, nt):
         L = (-1 * self.Tv * self.ustar**3)/(0.4 * 9.83 * self.H/1200)
+        if nt ==0:
+            print("MOL = {}, H = {}, ustar = {}, Tv = {}".format(L, self.H, self.ustar, self.Tv))
         zmd = self.z - self.disp_height
         ids = L >= 0.0
         idn = np.abs(L) > 99.0
@@ -204,20 +209,36 @@ class Model():
         # tally then eliminate particles outwith the measurement domain
         self.limit_to_range()
 
+    def plot_histogram(self,data):
+        print("reached plot histo")
+        bins = np.arange(10,300,5)
+        fig = plt.figure(figsize=(10,8))
+        ax = plt.subplot(1, 1, 1)
+        plt.hist(data, bins=bins, alpha=0.5)
+        plt.show()
+
     def run(self):
         # loop over time (0.1 sec time step)
-        print('Reached model run function')
-        for self.ix in range(18000):
+        #print('Reached model run function')
+        nt = 0
+        for self.ix in range(600):
             # update particles
-            print(self.ix)
-            self.update_particles(0.1)
+            #print(self.ix)
+            self.update_particles(0.1, nt)
+            nt = nt+1
             # def redraw_plot(self, ix, xi, yi, x, y, z, exit_count, flg)
             pub.sendMessage("PART.CHANGED", value1=self.ix, value2=self.xi, value3=self.yi, value4=self.x,
                             value5=self.y, value6=self.z, value7=self.exit_count)
             #### 9999 send particle info
             # add new particles at each time step
-            self.add_particles(3, [0], [0], [10], 1.0, 180, 200)
-
+            self.add_particles(15, [0], [0], [40], 0.8, 180, 150)
+        
+        self.flatList=[]
+        for elem in self.height_total:   # convert list of lists to a flat list
+            self.flatList.extend(elem)
+        #print(self.flatList)    
+        self.plot_histogram(self.flatList)
+        
 
 class View(wx.Frame):
     # from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as Canvas
@@ -434,7 +455,8 @@ class View(wx.Frame):
 class Controller:
     def __init__(self, app):
         # Create a new MODEL object
-        self.model = Model(1000, 0, 0.3, 30, 200, 100)
+        # (self, BL_height, disp_height, roughness, Tv, max_range, max_height)
+        self.model = Model(1000, 0, 0.3, 280, 200, 100)
         # Create a new VIEW object
         self.view = View()
 
@@ -462,7 +484,8 @@ class Controller:
         """
         print('Run Clicked and seen in Controller')
         # Create a new MODEL object
-        self.model = Model(1000, 0, 0.3, 30, 200, 100)
+        # (self, BL_height, disp_height, roughness, Tv, max_range, max_height)
+        self.model = Model(1000, 0, 0.3, 280, 200, 100)
         self.model.run()
 
     def PARTChanged(self, value1, value2, value3, value4, value5, value6, value7):
@@ -470,7 +493,7 @@ class Controller:
         This method is the handler for "START CLICKED" messages,
         which pubsub will call as messages are sent from the view Start button.
         """
-        print('Particle position changed')
+        #print('Particle position changed')
         # def redraw_plot(self, ix, xi, yi, x, y, z, exit_count, flg)
         self.view.redraw_plot(value1, value2, value3, value4, value5, value6, value7)
 

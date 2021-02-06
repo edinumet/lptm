@@ -38,7 +38,7 @@ class partinterface():
         self.btn.style.button_color = 'tomato'
         self.btn.on_click(self.btn_eventhandler)
 
-        self.h1 = widgets.HBox(children=[self.dd_stab,self.btn])
+        self.h1 = widgets.HBox(children=[self.dd_stab]) #,self.btn])
 
 
     def on_change(self,change):
